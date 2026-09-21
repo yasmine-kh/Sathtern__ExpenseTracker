@@ -1,10 +1,9 @@
-"""FastAPI application entrypoint.
-
-Routers are intentionally not wired up yet - this is the skeleton only.
-"""
+"""FastAPI application entrypoint."""
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.routers import summary, transactions
 
 app = FastAPI(
     title="Sathtern Expense Tracker API",
@@ -29,6 +28,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(transactions.router)
+app.include_router(summary.router)
 
 
 @app.get("/", tags=["health"])

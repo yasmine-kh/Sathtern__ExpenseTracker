@@ -3,5 +3,8 @@ fastapi==0.141.1
 uvicorn[standard]==0.53.0
 SQLAlchemy==2.0.54
 PyMySQL==1.2.3
+# Required by PyMySQL for MySQL 8.4's default caching_sha2_password auth.
+cryptography==50.0.1
 pydantic==2.13.5
 python-dotenv==1.2.3
+alembic==1.20.0

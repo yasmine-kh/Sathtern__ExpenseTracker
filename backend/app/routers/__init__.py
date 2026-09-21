@@ -1,1 +1,3 @@
-"""Route modules live here. Nothing is registered on the app yet."""
+from app.routers import summary, transactions
+
+__all__ = ["summary", "transactions"]
