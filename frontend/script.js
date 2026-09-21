@@ -105,9 +105,12 @@ function renderSummary(summary) {
   breakdownList.replaceChildren();
   breakdownEmpty.hidden = summary.by_category.length > 0;
 
-  // Bars are scaled against the largest absolute net, so the biggest mover
-  // fills the track and everything else is relative to it.
-  const widest = Math.max(...summary.by_category.map((c) => Math.abs(Number(c.net))), 0);
+  // Income and expenses get their own scale, each maxed against the largest
+  // value of its own type. A single shared scale would let one big salary
+  // flatten every expense bar to a near-invisible sliver.
+  const nets = summary.by_category.map((c) => Number(c.net));
+  const widestPositive = Math.max(...nets.filter((n) => n >= 0).map((n) => Math.abs(n)), 0);
+  const widestNegative = Math.max(...nets.filter((n) => n < 0).map((n) => Math.abs(n)), 0);
 
   for (const entry of summary.by_category) {
     const net = Number(entry.net);
@@ -132,7 +135,8 @@ function renderSummary(summary) {
     track.className = "bd-track";
     const fill = document.createElement("div");
     fill.className = `bd-fill ${positive ? "bd-fill-positive" : "bd-fill-negative"}`;
-    fill.style.width = widest > 0 ? `${(Math.abs(net) / widest) * 100}%` : "0%";
+    const scale = positive ? widestPositive : widestNegative;
+    fill.style.width = scale > 0 ? `${(Math.abs(net) / scale) * 100}%` : "0%";
     track.appendChild(fill);
 
     li.append(top, track);
