@@ -7,6 +7,8 @@
 const API_BASE = "http://localhost:8000";
 
 const form = document.getElementById("transaction-form");
+const formCard = form.closest(".card");
+const formHeading = document.getElementById("form-heading");
 const typeEl = document.getElementById("type");
 const amountEl = document.getElementById("amount");
 const categoryEl = document.getElementById("category");
@@ -15,12 +17,22 @@ const otherInput = document.getElementById("category-other");
 const dateEl = document.getElementById("date");
 const descriptionEl = document.getElementById("description");
 const submitBtn = document.getElementById("submit-btn");
+const cancelBtn = document.getElementById("cancel-btn");
 const formStatus = document.getElementById("form-status");
 const tbody = document.getElementById("transactions-body");
 const emptyState = document.getElementById("empty-state");
 const errorBanner = document.getElementById("error-banner");
 
+const statIncome = document.getElementById("stat-income");
+const statExpenses = document.getElementById("stat-expenses");
+const statBalance = document.getElementById("stat-balance");
+const breakdownList = document.getElementById("breakdown");
+const breakdownEmpty = document.getElementById("breakdown-empty");
+
 const OTHER = "__other__";
+
+/** id of the transaction being edited, or null when adding a new one. */
+let editingId = null;
 
 /* Errors ---------------------------------------------------------------- */
 
@@ -71,13 +83,64 @@ async function request(path, options = {}) {
   return response.status === 204 ? null : response.json();
 }
 
-/* Rendering ------------------------------------------------------------- */
+/* Formatting ------------------------------------------------------------ */
+
+const money = (value) => Number(value).toFixed(2);
 
 function formatAmount(type, amount) {
-  const sign = type === "income" ? "+" : "-";
-  const value = Number(amount).toFixed(2);
-  return `${sign}${value}`;
+  return `${type === "income" ? "+" : "-"}${money(amount)}`;
 }
+
+/* Dashboard ------------------------------------------------------------- */
+
+function renderSummary(summary) {
+  statIncome.textContent = money(summary.total_income);
+  statExpenses.textContent = money(summary.total_expenses);
+
+  const balance = Number(summary.balance);
+  statBalance.textContent = money(balance);
+  statBalance.classList.toggle("balance-positive", balance >= 0);
+  statBalance.classList.toggle("balance-negative", balance < 0);
+
+  breakdownList.replaceChildren();
+  breakdownEmpty.hidden = summary.by_category.length > 0;
+
+  // Bars are scaled against the largest absolute net, so the biggest mover
+  // fills the track and everything else is relative to it.
+  const widest = Math.max(...summary.by_category.map((c) => Math.abs(Number(c.net))), 0);
+
+  for (const entry of summary.by_category) {
+    const net = Number(entry.net);
+    const positive = net >= 0;
+
+    const li = document.createElement("li");
+
+    const top = document.createElement("div");
+    top.className = "bd-top";
+
+    const name = document.createElement("span");
+    name.className = "bd-name";
+    name.textContent = entry.category;
+
+    const value = document.createElement("span");
+    value.className = `bd-value ${positive ? "amount-income" : "amount-expense"}`;
+    value.textContent = `${positive ? "+" : "-"}${money(Math.abs(net))}`;
+
+    top.append(name, value);
+
+    const track = document.createElement("div");
+    track.className = "bd-track";
+    const fill = document.createElement("div");
+    fill.className = `bd-fill ${positive ? "bd-fill-positive" : "bd-fill-negative"}`;
+    fill.style.width = widest > 0 ? `${(Math.abs(net) / widest) * 100}%` : "0%";
+    track.appendChild(fill);
+
+    li.append(top, track);
+    breakdownList.appendChild(li);
+  }
+}
+
+/* Table ----------------------------------------------------------------- */
 
 function cell(row, label, text) {
   const td = document.createElement("td");
@@ -87,12 +150,23 @@ function cell(row, label, text) {
   return td;
 }
 
+function actionButton(className, label, id, ariaLabel) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.textContent = label;
+  button.dataset.id = id;
+  button.setAttribute("aria-label", ariaLabel);
+  return button;
+}
+
 function renderTransactions(transactions) {
   tbody.replaceChildren();
   emptyState.hidden = transactions.length > 0;
 
   for (const t of transactions) {
     const tr = document.createElement("tr");
+    if (String(t.id) === String(editingId)) tr.classList.add("row-editing");
 
     cell(tr, "Date", t.date);
 
@@ -109,31 +183,89 @@ function renderTransactions(transactions) {
     amountTd.classList.add("num", "amount", `amount-${t.type}`);
 
     const actionTd = document.createElement("td");
-    const del = document.createElement("button");
-    del.type = "button";
-    del.className = "delete-btn";
-    del.textContent = "Delete";
-    del.dataset.id = t.id;
-    del.setAttribute("aria-label", `Delete transaction from ${t.date}`);
-    actionTd.appendChild(del);
+    const group = document.createElement("div");
+    group.className = "row-actions";
+    group.append(
+      actionButton("edit-btn", "Edit", t.id, `Edit transaction from ${t.date}`),
+      actionButton("delete-btn", "Delete", t.id, `Delete transaction from ${t.date}`),
+    );
+    actionTd.appendChild(group);
     tr.appendChild(actionTd);
 
     tbody.appendChild(tr);
   }
 }
 
-/* Actions --------------------------------------------------------------- */
+/* Loading --------------------------------------------------------------- */
 
-async function loadTransactions() {
+/** Transactions and summary always move together, so refresh them together. */
+async function refreshAll() {
   try {
-    const transactions = await request("/transactions");
+    const [transactions, summary] = await Promise.all([
+      request("/transactions"),
+      request("/summary"),
+    ]);
     renderTransactions(transactions);
+    renderSummary(summary);
     clearError();
   } catch (err) {
     // Leave whatever is on screen; the banner explains why it may be stale.
     showError(describeFailure(err));
   }
 }
+
+/* Edit mode ------------------------------------------------------------- */
+
+const knownCategories = () =>
+  [...categoryEl.options].map((o) => o.value).filter((v) => v !== OTHER);
+
+function enterEditMode(transaction) {
+  editingId = transaction.id;
+
+  typeEl.value = transaction.type;
+  amountEl.value = Number(transaction.amount).toFixed(2);
+  dateEl.value = transaction.date;
+  descriptionEl.value = transaction.description || "";
+
+  // A category that is not in the dropdown has to go in the free-text field.
+  if (knownCategories().includes(transaction.category)) {
+    categoryEl.value = transaction.category;
+    otherInput.value = "";
+  } else {
+    categoryEl.value = OTHER;
+    otherInput.value = transaction.category;
+  }
+  handleCategoryChange({ focus: false });
+
+  formHeading.textContent = "Edit transaction";
+  submitBtn.textContent = "Update transaction";
+  cancelBtn.hidden = false;
+  formCard.classList.add("editing");
+  formStatus.textContent = "";
+
+  for (const tr of tbody.querySelectorAll("tr")) tr.classList.remove("row-editing");
+  const row = tbody.querySelector(`.edit-btn[data-id="${transaction.id}"]`)?.closest("tr");
+  if (row) row.classList.add("row-editing");
+
+  formCard.scrollIntoView({ behavior: "smooth", block: "start" });
+  amountEl.focus();
+}
+
+function exitEditMode() {
+  editingId = null;
+  form.reset();
+  otherField.hidden = true;
+  dateEl.value = today();
+
+  formHeading.textContent = "Add a transaction";
+  submitBtn.textContent = "Add transaction";
+  cancelBtn.hidden = true;
+  formCard.classList.remove("editing");
+
+  for (const tr of tbody.querySelectorAll("tr")) tr.classList.remove("row-editing");
+}
+
+/* Actions --------------------------------------------------------------- */
 
 function resolveCategory() {
   if (categoryEl.value !== OTHER) return categoryEl.value;
@@ -170,41 +302,49 @@ async function handleSubmit(event) {
     date: dateEl.value,
   };
 
+  const isEditing = editingId !== null;
   submitBtn.disabled = true;
-  submitBtn.textContent = "Adding…";
+  submitBtn.textContent = isEditing ? "Updating…" : "Adding…";
 
   try {
-    await request("/transactions", {
-      method: "POST",
+    await request(isEditing ? `/transactions/${editingId}` : "/transactions", {
+      method: isEditing ? "PUT" : "POST",
       body: JSON.stringify(payload),
     });
 
-    form.reset();
-    otherField.hidden = true;
-    dateEl.value = today();
-    formStatus.textContent = "Transaction added.";
+    exitEditMode();
+    formStatus.textContent = isEditing ? "Transaction updated." : "Transaction added.";
     setTimeout(() => (formStatus.textContent = ""), 2500);
 
-    await loadTransactions();
+    await refreshAll();
   } catch (err) {
     showError(describeFailure(err));
+    submitBtn.textContent = isEditing ? "Update transaction" : "Add transaction";
   } finally {
     submitBtn.disabled = false;
-    submitBtn.textContent = "Add transaction";
   }
 }
 
-async function handleDelete(event) {
-  const button = event.target.closest(".delete-btn");
-  if (!button) return; // click landed somewhere else in the table
+async function handleEdit(button) {
+  clearError();
+  try {
+    const transaction = await request(`/transactions/${button.dataset.id}`);
+    enterEditMode(transaction);
+  } catch (err) {
+    showError(describeFailure(err));
+  }
+}
 
+async function handleDelete(button) {
   const id = button.dataset.id;
   button.disabled = true;
   button.textContent = "Deleting…";
 
   try {
     await request(`/transactions/${id}`, { method: "DELETE" });
-    await loadTransactions();
+    // Don't leave the form bound to a row that no longer exists.
+    if (String(id) === String(editingId)) exitEditMode();
+    await refreshAll();
   } catch (err) {
     showError(describeFailure(err));
     button.disabled = false;
@@ -212,10 +352,19 @@ async function handleDelete(event) {
   }
 }
 
-function handleCategoryChange() {
+/** One delegated listener: rows are replaced on every refresh. */
+function handleTableClick(event) {
+  const editBtn = event.target.closest(".edit-btn");
+  if (editBtn) return handleEdit(editBtn);
+
+  const deleteBtn = event.target.closest(".delete-btn");
+  if (deleteBtn) return handleDelete(deleteBtn);
+}
+
+function handleCategoryChange({ focus = true } = {}) {
   const isOther = categoryEl.value === OTHER;
   otherField.hidden = !isOther;
-  if (isOther) otherInput.focus();
+  if (isOther && focus) otherInput.focus();
 }
 
 /* Init ------------------------------------------------------------------ */
@@ -228,8 +377,9 @@ function today() {
 }
 
 form.addEventListener("submit", handleSubmit);
-categoryEl.addEventListener("change", handleCategoryChange);
-tbody.addEventListener("click", handleDelete); // delegated: rows are re-rendered
+cancelBtn.addEventListener("click", exitEditMode);
+categoryEl.addEventListener("change", () => handleCategoryChange());
+tbody.addEventListener("click", handleTableClick);
 
 dateEl.value = today();
-loadTransactions();
+refreshAll();

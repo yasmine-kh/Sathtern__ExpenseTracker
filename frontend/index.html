@@ -16,8 +16,30 @@
     <!-- Populated by script.js when a fetch fails; hidden otherwise. -->
     <div id="error-banner" class="banner" role="alert" hidden></div>
 
+    <section class="card" id="summary-card">
+      <h2>Dashboard</h2>
+      <div class="stats">
+        <div class="stat">
+          <span class="stat-label">Total income</span>
+          <span class="stat-value stat-income" id="stat-income">&mdash;</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Total expenses</span>
+          <span class="stat-value stat-expense" id="stat-expenses">&mdash;</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Balance</span>
+          <span class="stat-value" id="stat-balance">&mdash;</span>
+        </div>
+      </div>
+
+      <h3 class="breakdown-head">By category <span class="opt">(net: income &minus; expenses)</span></h3>
+      <ul class="breakdown" id="breakdown"></ul>
+      <p id="breakdown-empty" class="empty" hidden>Nothing to break down yet.</p>
+    </section>
+
     <section class="card">
-      <h2>Add a transaction</h2>
+      <h2 id="form-heading">Add a transaction</h2>
       <form id="transaction-form" novalidate>
         <div class="grid">
           <div class="field">
@@ -70,6 +92,7 @@
 
         <div class="actions">
           <button type="submit" id="submit-btn">Add transaction</button>
+          <button type="button" id="cancel-btn" class="secondary-btn" hidden>Cancel</button>
           <span id="form-status" class="status" aria-live="polite"></span>
         </div>
       </form>
