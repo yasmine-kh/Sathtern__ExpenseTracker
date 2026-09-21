@@ -1,0 +1,214 @@
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --text: #1c1e21;
+  --muted: #6b7280;
+  --border: #dfe3e8;
+  --accent: #2563eb;
+  --accent-text: #ffffff;
+  --income: #047857;
+  --expense: #b91c1c;
+  --danger: #b91c1c;
+  --error-bg: #fee2e2;
+  --error-border: #fca5a5;
+  --radius: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171a;
+    --surface: #1e2126;
+    --text: #e8eaed;
+    --muted: #9aa0a6;
+    --border: #343941;
+    --accent: #60a5fa;
+    --accent-text: #10131a;
+    --income: #34d399;
+    --expense: #f87171;
+    --danger: #f87171;
+    --error-bg: #3f1d1d;
+    --error-border: #7f1d1d;
+  }
+}
+
+* { box-sizing: border-box; }
+
+/* The [hidden] attribute must win over the display rules below (.field is
+   display:flex, which would otherwise keep hidden elements on screen). */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+.page-head { margin-bottom: 20px; }
+.page-head h1 { margin: 0; font-size: 1.6rem; }
+.sub { margin: 4px 0 0; color: var(--muted); }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.card h2 { margin: 0 0 16px; font-size: 1.1rem; }
+
+/* Form ------------------------------------------------------------------ */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+.field { display: flex; flex-direction: column; }
+.field-wide { grid-column: 1 / -1; }
+.field label { font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; }
+.opt { font-weight: 400; color: var(--muted); }
+
+input, select {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px 10px;
+  width: 100%;
+}
+input:focus, select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+.actions {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+button {
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 10px 18px;
+  background: var(--accent);
+  color: var(--accent-text);
+}
+button:hover:not(:disabled) { filter: brightness(1.08); }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.status { color: var(--muted); font-size: 0.9rem; }
+
+/* Error banner ---------------------------------------------------------- */
+.banner {
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  font-size: 0.93rem;
+}
+
+/* Table ----------------------------------------------------------------- */
+.table-scroll { overflow-x: auto; }
+
+table { width: 100%; border-collapse: collapse; }
+th, td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+tbody tr:last-child td { border-bottom: none; }
+.num { text-align: right; }
+
+.pill {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+.pill-income { color: var(--income); }
+.pill-expense { color: var(--expense); }
+
+.amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.amount-income { color: var(--income); }
+.amount-expense { color: var(--expense); }
+
+.delete-btn {
+  background: transparent;
+  color: var(--danger);
+  border-color: var(--border);
+  padding: 5px 12px;
+  font-size: 0.85rem;
+}
+.delete-btn:hover:not(:disabled) { background: var(--error-bg); }
+
+.empty { color: var(--muted); text-align: center; padding: 20px 0; margin: 0; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Narrow screens: turn each row into a stacked card ---------------------- */
+@media (max-width: 620px) {
+  .wrap { padding: 16px 16px 48px; }
+  .card { padding: 16px; }
+
+  thead { display: none; }
+  table, tbody, tr, td { display: block; width: 100%; }
+
+  tbody tr {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    margin-bottom: 12px;
+  }
+  tbody tr:last-child { margin-bottom: 0; }
+
+  td {
+    border-bottom: none;
+    padding: 4px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  /* Header text for each cell comes from data-label set in script.js. */
+  td::before {
+    content: attr(data-label);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  td.num { text-align: right; }
+  .delete-btn { width: 100%; margin-top: 6px; }
+  td:last-child::before { content: none; }
+}

@@ -13,12 +13,14 @@ app = FastAPI(
 
 # Local dev front-ends. Credentials are allowed, so origins must be listed
 # explicitly - a wildcard is not permitted alongside allow_credentials.
+# Covers the common static-server ports: 5500/5501 (VS Code Live Server),
+# 8080 (python -m http.server), 3000 and 5173 (Node dev servers).
+_ports = [3000, 5173, 5500, 5501, 8080]
 origins = [
     "http://localhost",
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173",
+    "http://127.0.0.1",
+    *[f"http://localhost:{port}" for port in _ports],
+    *[f"http://127.0.0.1:{port}" for port in _ports],
 ]
 
 app.add_middleware(

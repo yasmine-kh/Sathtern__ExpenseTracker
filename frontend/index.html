@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sathtern Expense Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="page-head">
+      <h1>Sathtern Expense Tracker</h1>
+      <p class="sub">Track income and expenses</p>
+    </header>
+
+    <!-- Populated by script.js when a fetch fails; hidden otherwise. -->
+    <div id="error-banner" class="banner" role="alert" hidden></div>
+
+    <section class="card">
+      <h2>Add a transaction</h2>
+      <form id="transaction-form" novalidate>
+        <div class="grid">
+          <div class="field">
+            <label for="type">Type</label>
+            <select id="type" name="type" required>
+              <option value="expense">Expense</option>
+              <option value="income">Income</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="amount">Amount</label>
+            <input type="number" id="amount" name="amount" step="0.01" min="0.01"
+                   placeholder="0.00" required>
+          </div>
+
+          <div class="field">
+            <label for="category">Category</label>
+            <select id="category" name="category" required>
+              <option value="Salary">Salary</option>
+              <option value="Groceries">Groceries</option>
+              <option value="Dining">Dining</option>
+              <option value="Transport">Transport</option>
+              <option value="Rent">Rent</option>
+              <option value="Utilities">Utilities</option>
+              <option value="Entertainment">Entertainment</option>
+              <option value="Health">Health</option>
+              <option value="Shopping">Shopping</option>
+              <option value="__other__">Other&hellip;</option>
+            </select>
+          </div>
+
+          <div class="field" id="other-category-field" hidden>
+            <label for="category-other">Custom category</label>
+            <input type="text" id="category-other" name="category-other"
+                   maxlength="64" placeholder="Type a category">
+          </div>
+
+          <div class="field">
+            <label for="date">Date</label>
+            <input type="date" id="date" name="date" required>
+          </div>
+
+          <div class="field field-wide">
+            <label for="description">Description <span class="opt">(optional)</span></label>
+            <input type="text" id="description" name="description" maxlength="255"
+                   placeholder="What was it for?">
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" id="submit-btn">Add transaction</button>
+          <span id="form-status" class="status" aria-live="polite"></span>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Transactions</h2>
+      <div class="table-scroll">
+        <table id="transactions-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Category</th>
+              <th>Description</th>
+              <th class="num">Amount</th>
+              <th><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody id="transactions-body"></tbody>
+        </table>
+      </div>
+      <p id="empty-state" class="empty" hidden>No transactions yet. Add one above.</p>
+    </section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
